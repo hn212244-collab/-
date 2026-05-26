@@ -39,30 +39,6 @@ canvas{
     box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-.note-zone{
-    display:flex;
-    flex-direction:column-reverse;
-    height:350px;
-    border:2px solid #333;
-    border-radius:10px;
-    overflow:hidden;
-    margin-top:10px;
-}
-
-.zone{
-    flex:1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-top:1px solid #999;
-    font-size:20px;
-    font-weight:bold;
-}
-
-.active{
-    background:#ffd54f;
-}
-
 .bar{
     height:30px;
     background:#ddd;
@@ -119,22 +95,12 @@ button{
 
 <button onclick="startAudio()">🎹 시작하기</button>
 
-<div class="note-zone" id="noteZone">
-<div class="zone" id="zone6">시 (B)</div>
-<div class="zone" id="zone5">라 (A)</div>
-<div class="zone" id="zone4">솔 (G)</div>
-<div class="zone" id="zone3">파 (F)</div>
-<div class="zone" id="zone2">미 (E)</div>
-<div class="zone" id="zone1">레 (D)</div>
-<div class="zone" id="zone0">도 (C)</div>
-</div>
-
 <div class="instructions">
 <h3>사용 방법</h3>
 <ul>
 <li>오른손을 위아래로 움직여 음계를 연주하세요.</li>
 <li>왼손을 위로 올리면 템포가 빨라져요.</li>
-<li>몸으로 음악을 표현하며 지휘자가 되어보세요!</li>
+<li>화면 속 음계 칸에 손을 맞춰 연주해보세요!</li>
 </ul>
 </div>
 
@@ -149,26 +115,49 @@ const canvasCtx = canvasElement.getContext('2d');
 const synth = new Tone.Synth().toDestination();
 
 const notes = [
-    {name:"도 (C)", note:"C4"},
-    {name:"레 (D)", note:"D4"},
-    {name:"미 (E)", note:"E4"},
-    {name:"파 (F)", note:"F4"},
-    {name:"솔 (G)", note:"G4"},
-    {name:"라 (A)", note:"A4"},
-    {name:"시 (B)", note:"B4"}
+    {korean:"도", english:"C", note:"C4"},
+    {korean:"레", english:"D", note:"D4"},
+    {korean:"미", english:"E", note:"E4"},
+    {korean:"파", english:"F", note:"F4"},
+    {korean:"솔", english:"G", note:"G4"},
+    {korean:"라", english:"A", note:"A4"},
+    {korean:"시", english:"B", note:"B4"}
 ];
 
 let currentZone = -1;
-let playbackSpeed = 1.0;
 
 function startAudio(){
     Tone.start();
     alert("손을 움직여 연주를 시작해보세요!");
 }
 
-function clearZones(){
+function drawNoteZones(activeZone){
+
+    const zoneHeight = canvasElement.height / 7;
+
     for(let i=0;i<7;i++){
-        document.getElementById("zone"+i).classList.remove("active");
+
+        const y = canvasElement.height - ((i+1) * zoneHeight);
+
+        if(i === activeZone){
+            canvasCtx.fillStyle = "rgba(255, 215, 0, 0.5)";
+        }else{
+            canvasCtx.fillStyle = "rgba(255,255,255,0.15)";
+        }
+
+        canvasCtx.fillRect(0, y, canvasElement.width, zoneHeight);
+
+        canvasCtx.strokeStyle = "white";
+        canvasCtx.lineWidth = 2;
+        canvasCtx.strokeRect(0, y, canvasElement.width, zoneHeight);
+
+        canvasCtx.fillStyle = "white";
+        canvasCtx.font = "24px Arial";
+        canvasCtx.fillText(
+            notes[i].korean + " (" + notes[i].english + ")",
+            20,
+            y + zoneHeight/2 + 8
+        );
     }
 }
 
@@ -178,6 +167,8 @@ function onResults(results){
     canvasCtx.clearRect(0,0,canvasElement.width,canvasElement.height);
 
     canvasCtx.drawImage(results.image,0,0,canvasElement.width,canvasElement.height);
+
+    let activeZone = -1;
 
     if(results.multiHandLandmarks){
 
@@ -202,10 +193,10 @@ function onResults(results){
                 if(zone < 0) zone = 0;
                 if(zone > 6) zone = 6;
 
-                clearZones();
-                document.getElementById("zone"+zone).classList.add("active");
+                activeZone = zone;
 
-                document.getElementById("currentNote").innerText = notes[zone].name;
+                document.getElementById("currentNote").innerText =
+                    notes[zone].korean + " (" + notes[zone].english + ")";
 
                 if(zone !== currentZone){
                     synth.triggerAttackRelease(
@@ -224,10 +215,6 @@ function onResults(results){
                 if(speed < 0.5) speed = 0.5;
                 if(speed > 2.0) speed = 2.0;
 
-                playbackSpeed = speed;
-
-                Tone.Transport.bpm.value = 120 * speed;
-
                 document.getElementById("tempoFill").style.width =
                     ((speed-0.5)/1.5*100) + "%";
 
@@ -237,6 +224,8 @@ function onResults(results){
 
         });
     }
+
+    drawNoteZones(activeZone);
 
     canvasCtx.restore();
 }
